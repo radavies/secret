@@ -28,8 +28,7 @@ public class ByteHelper {
         ImageInformation imageInformation = new ImageInformation();
 
         byte previousByte = 0x00;
-        //boolean firstStartOfScan = true;
-        int startOfScanCounter = 0;
+        boolean firstStartOfScan = true;
 
         for (int counter = 0; counter < imageBytes.length; counter++) {
 
@@ -37,13 +36,11 @@ public class ByteHelper {
 
             if (previousByte == (byte) 0xFF && b == (byte) 0xDA) {
                 //Start Of Scan
-                //if(firstStartOfScan){
-                if(startOfScanCounter < 1){
+                if(firstStartOfScan){
                     //Ignore everything before this point
                     //+1 so the start is the first byte after the marker
                     imageInformation.setStartLocation(counter + 1);
-                    //firstStartOfScan = false;
-                    startOfScanCounter++;
+                    firstStartOfScan = false;
                 }else {
                     //Ignore this byte and the previous one
                     //which covers both bytes in the marker
@@ -66,7 +63,8 @@ public class ByteHelper {
 
     public byte[] hideMessageInImage(byte[] messageBytes, byte[] imageBytes, ImageInformation imageInformation) {
 
-        int outputByteCounter = imageInformation.getStartLocation();
+        //We start at the end and work backward
+        int outputByteCounter = imageInformation.getEndLocation() -1;
         int outputBitCounter = 0;
 
         byte[] output = Arrays.copyOf(imageBytes, imageBytes.length);
@@ -109,10 +107,11 @@ public class ByteHelper {
     }
 
     private int getNextAvailableOutputByte(ImageInformation imageInformation, int currentByteLocation){
-        currentByteLocation++;
+        //Start a the end and move backward
+        currentByteLocation--;
 
         while(!imageInformation.isByteAvailable(currentByteLocation)){
-            currentByteLocation++;
+            currentByteLocation--;
         }
         return currentByteLocation;
     }
