@@ -8,6 +8,7 @@ public class Main {
         String imagePath = "";
         String messagePath = "";
         String outputPath = "";
+        boolean write = true;
 
         for(String item : args) {
             String[] keyValueItem = item.split("=");
@@ -21,10 +22,18 @@ public class Main {
             else if (keyValueItem[0].equalsIgnoreCase("output")) {
                 outputPath = keyValueItem[1];
             }
+            else if (keyValueItem[0].equalsIgnoreCase("job")) {
+                write = keyValueItem[1].equalsIgnoreCase("write");
+            }
         }
 
-        Runner runner = new Runner(key, imagePath, messagePath, outputPath);
-
-        runner.start();
+        if(write){
+            Writer writer = new Writer(key, imagePath, messagePath, outputPath);
+            writer.write();
+        }
+        else{
+            Reader reader = new Reader(key, imagePath, outputPath);
+            reader.read();
+        }
     }
 }

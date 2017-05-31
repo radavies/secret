@@ -1,6 +1,6 @@
 package secret;
 
-public class Runner {
+public class Writer {
 
     private final String key;
     private final String imagePath;
@@ -9,7 +9,7 @@ public class Runner {
     private final FileHelper fileHelper;
     private final ByteHelper byteHelper;
 
-    public Runner(String key, String imagePath, String messagePath, String outputPath){
+    public Writer(String key, String imagePath, String messagePath, String outputPath){
 
         this.key = key;
         this.imagePath = imagePath;
@@ -27,7 +27,7 @@ public class Runner {
         }
     }
 
-    public void start() {
+    public void write() {
 
         try {
 
