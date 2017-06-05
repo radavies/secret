@@ -1,6 +1,6 @@
 package secret;
 
-import java.awt.*;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 public class ByteHelper {
@@ -84,10 +84,12 @@ public class ByteHelper {
                     output[outputByteCounter] = outByte;
                 }
 
-                outputBitCounter++;
                 if (outputBitCounter == 1) {
-                    outputByteCounter = getNextAvailableOutputByte(imageInformation, outputByteCounter);
+                    outputByteCounter = getNextAvailableImageByte(imageInformation, outputByteCounter);
                     outputBitCounter = 0;
+                }
+                else {
+                    outputBitCounter++;
                 }
             }
         }
@@ -106,7 +108,55 @@ public class ByteHelper {
         return output;
     }
 
-    private int getNextAvailableOutputByte(ImageInformation imageInformation, int currentByteLocation){
+    public byte[] readMessageFromImage(byte[] imageBytes, ImageInformation imageInformation){
+
+        ArrayList<Byte> messageStorage = new ArrayList<>();
+
+        int imageByteCounter = imageInformation.getEndLocation() -1;
+        int imageBitCounter = 0;
+
+        // TODO: replace loop with a check for EOM flag
+        // Current message is 32 bytes long
+
+        while(messageStorage.size() < 32){
+            byte newByte = 0x00;
+            byte imageByte = imageBytes[imageByteCounter];
+            for (int counter = 0; counter < 7; counter++) {
+
+                if(isBitSet(imageByte, imageBitCounter)){
+                    //set a bit in the new byte
+                    newByte = (byte) (newByte | (1 << counter));
+                }
+
+                //get a new byte from the image if we need to
+                if (imageBitCounter == 1) {
+                    imageByteCounter = getNextAvailableImageByte(imageInformation, imageByteCounter);
+                    imageByte = imageBytes[imageByteCounter];
+                    imageBitCounter = 0;
+                }
+                else {
+                    imageBitCounter++;
+                }
+            }
+
+            messageStorage.add(newByte);
+
+        }
+
+        //convert to byte array
+        Byte[] bigByteStorage = new Byte[messageStorage.size()];
+        bigByteStorage = messageStorage.toArray(bigByteStorage);
+        byte[] output = new byte[messageStorage.size()];
+
+        for(int counter = 0; counter < bigByteStorage.length; counter++){
+            output[counter] = bigByteStorage[counter];
+        }
+
+        return output;
+
+    }
+
+    private int getNextAvailableImageByte(ImageInformation imageInformation, int currentByteLocation){
         //Start a the end and move backward
         currentByteLocation--;
 
@@ -117,11 +167,13 @@ public class ByteHelper {
     }
 
     private boolean isBitSet(byte bite, int bitPosition) {
+
         return (bite & (1 << bitPosition)) != 0;
     }
 
 
     public byte[] convertMessageToBytes(String message) {
+
         return message.getBytes();
     }
 
@@ -130,6 +182,7 @@ public class ByteHelper {
     }
 
     private int getNumberOfBytesRequiredToHideMessage(byte[] messageBytes) {
+
         return messageBytes.length * 4;
     }
 
@@ -194,29 +247,6 @@ public class ByteHelper {
         System.out.println(String.format("Found %d files markers: ", markersFound));
         System.out.println(String.format("Found %d on bytes: ", onBytesFound));
     }
-
-//    public void getImageMarkerLocationsBmp(byte[] imageBytes) {
-//
-//        System.out.println(String.format("Image is %d bytes long", imageBytes.length));
-//
-//        byte previousByte = 0x00;
-//        int counter = 0;
-//        for (byte b : imageBytes) {
-//            if (previousByte == (byte) 0xFF && b == (byte) 0xD8) {
-//                System.out.println("Start Of Image");
-//                System.out.println("Found at byte: " + counter);
-//            } else if (previousByte == (byte) 0xFF && b == (byte) 0xC0) {
-//                System.out.println("Start Of Image (baseline DCT)");
-//                System.out.println("Found at byte: " + counter);
-//            } else if (previousByte == (byte) 0xFF && b == (byte) 0xC2) {
-//                System.out.println("Start Of Image (progressive DCT)");
-//                System.out.println("Found at byte: " + counter);
-//            }
-//
-//            previousByte = b;
-//            counter++;
-//        }
-//    }
 
     public void printImageLocationComparisonJpg(byte[] imageBytes, byte[] outputBytes) {
 

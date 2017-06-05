@@ -1,6 +1,8 @@
 package secret;
 
 
+import java.util.Arrays;
+
 public class Reader {
 
     private final String key;
@@ -26,7 +28,20 @@ public class Reader {
     }
 
     public void read(){
+        byte[] imageBytes = fileHelper.getImageData(imagePath);
 
+        if (imageBytes == null || imageBytes.length < 1) {
+            throw new RuntimeException("Image file not found or image was empty.");
+        }
+
+        ImageInformation imageInformation = byteHelper.getImageInformation(imageBytes);
+
+        byte[] messageBytes = byteHelper.readMessageFromImage(imageBytes, imageInformation);
+
+        //debug
+        System.out.println(Arrays.toString(messageBytes));
+        String test = new String(messageBytes);
+        System.out.print(test);
     }
 
 }

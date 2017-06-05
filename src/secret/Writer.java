@@ -1,5 +1,7 @@
 package secret;
 
+import java.util.Arrays;
+
 public class Writer {
 
     private final String key;
@@ -36,6 +38,11 @@ public class Writer {
             // TODO: Encrypt the message before converting it to bytes
 
             byte[] messageBytes = byteHelper.convertMessageToBytes(message);
+
+            //debug
+            System.out.println(Arrays.toString(messageBytes));
+            String test = new String(messageBytes);
+            System.out.print(test);
 
             byte[] imageBytes = fileHelper.getImageData(imagePath);
 
