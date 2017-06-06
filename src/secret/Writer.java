@@ -10,6 +10,7 @@ public class Writer {
     private final String outputPath;
     private final FileHelper fileHelper;
     private final ByteHelper byteHelper;
+    private final Encryption encryption;
 
     public Writer(String key, String imagePath, String messagePath, String outputPath){
 
@@ -20,6 +21,7 @@ public class Writer {
 
         fileHelper = new FileHelper();
         byteHelper = new ByteHelper();
+        encryption = new Encryption();
 
         if(this.key.equalsIgnoreCase("")
                 || this.imagePath.equalsIgnoreCase("")
@@ -33,11 +35,11 @@ public class Writer {
 
         try {
 
+            //TODO: add error handling around the crypto
+
             String message = fileHelper.getMessage(messagePath);
-
-            // TODO: Encrypt the message before converting it to bytes
-
-            byte[] messageBytes = byteHelper.convertMessageToBytes(message);
+            byte[] messageBytes = encryption.encrypt(message, key);
+            //byte[] messageBytes = byteHelper.convertMessageToBytes(message);
 
             //debug
             System.out.println(String.format("Message is %d bytes long.", messageBytes.length));
@@ -67,7 +69,9 @@ public class Writer {
 
 
         } catch (Exception ex) {
+            System.out.println("----------");
             System.out.println(String.format("Something went wrong - %s", ex.getMessage()));
+            System.out.println("----------");
         }
 
     }

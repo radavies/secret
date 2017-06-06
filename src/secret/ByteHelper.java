@@ -1,28 +1,11 @@
 package secret;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 
 public class ByteHelper {
 
-    //http://www.catonmat.net/blog/low-level-bit-hacks-you-absolutely-must-know/
-
-    //byte b = 0x7;
-    //System.out.println(b);
-    //System.out.println(Integer.toBinaryString(b & 255 | 256).substring(1));
-    //b = (byte) (b | (1 << 6));
-    //System.out.println(b);
-    //System.out.println(Integer.toBinaryString(b & 255 | 256).substring(1));
-    //b = (byte) (b | (1 << 7));
-    //System.out.println(b);
-    //System.out.println(Integer.toBinaryString(b & 255 | 256).substring(1));
-    //b = (byte) (b & ~(1 << 0));
-    //System.out.println(b);
-    //System.out.println(Integer.toBinaryString(b & 255 | 256).substring(1));
-    //b = (byte) (b & ~(1 << 1));
-    //System.out.println(b);
-    //System.out.println(Integer.toBinaryString(b & 255 | 256).substring(1));
-    //System.out.println("----");
 
     public ImageInformation getImageInformation(byte[] imageBytes){
         ImageInformation imageInformation = new ImageInformation();
@@ -61,9 +44,118 @@ public class ByteHelper {
         return imageInformation;
     }
 
+    public byte[] hideMessageInImage(byte[] messageBytes, byte[] imageBytes, ImageInformation imageInformation) {
+
+        //We start at the end and work backward
+        int outputByteCounter = imageInformation.getEndLocation() -1;
+        int outputBitCounter = 0;
+
+        byte[] output = Arrays.copyOf(imageBytes, imageBytes.length);
+
+        //write the message length
+        byte[] messageLengthBytes = ByteBuffer.allocate(4).putInt(messageBytes.length).array();
+
+        for(byte lengthByte : messageLengthBytes) {
+            int[] newPositions = writeByteIntoOutput(lengthByte, output, outputByteCounter, outputBitCounter, imageInformation);
+            outputByteCounter = newPositions[0];
+            outputBitCounter = newPositions[1];
+        }
+
+        //write the message
+        for (byte bite : messageBytes) {
+            int[] newPositions = writeByteIntoOutput(bite, output, outputByteCounter, outputBitCounter, imageInformation);
+            outputByteCounter = newPositions[0];
+            outputBitCounter = newPositions[1];
+        }
+
+        return output;
+    }
+
+    public byte[] readMessageFromImage(byte[] imageBytes, ImageInformation imageInformation){
+
+        ArrayList<Byte> messageStorage = new ArrayList<>();
+
+        int imageByteCounter = imageInformation.getEndLocation() -1;
+        int imageBitCounter = 0;
+
+        //read the message length
+        byte[] messageLengthBytes = new byte[4];
+        for(int lengthByteCounter = 0; lengthByteCounter < 4; lengthByteCounter++){
+
+            ByteReadPosition byteReadPosition = readByte(imageBytes,imageInformation, imageByteCounter, imageBitCounter);
+            imageByteCounter = byteReadPosition.imageBytePosition;
+            imageBitCounter = byteReadPosition.imageBitPosition;
+            messageLengthBytes[lengthByteCounter] = byteReadPosition.readByte;
+        }
+
+        int messageLength = convertMessageLengthByteArrayToInt(messageLengthBytes);
+
+        //read the message
+        while(messageStorage.size() < messageLength){
+            ByteReadPosition byteReadPosition = readByte(imageBytes,imageInformation, imageByteCounter, imageBitCounter);
+            imageByteCounter = byteReadPosition.imageBytePosition;
+            imageBitCounter = byteReadPosition.imageBitPosition;
+            messageStorage.add(byteReadPosition.readByte);
+        }
+
+        //convert to byte array
+        Byte[] bigByteStorage = new Byte[messageStorage.size()];
+        bigByteStorage = messageStorage.toArray(bigByteStorage);
+        byte[] output = new byte[messageStorage.size()];
+
+        for(int counter = 0; counter < bigByteStorage.length; counter++){
+            output[counter] = bigByteStorage[counter];
+        }
+
+        return output;
+    }
+
+    public byte[] convertMessageToBytes(String message) {
+        return message.getBytes();
+    }
+
+    public boolean isThereSpaceToHideTheMessage(byte[] messageBytes, ImageInformation imageInformation) {
+        return getNumberOfBytesRequiredToHideMessage(messageBytes) < imageInformation.availableBytes();
+    }
+
+    private ByteReadPosition readByte(byte[] imageBytes, ImageInformation imageInformation, int imageByteCounter, int imageBitCounter){
+
+        byte outputByte = 0x00;
+        byte imageByte = imageBytes[imageByteCounter];
+
+        for (int counter = 0; counter <= 7; counter++) {
+            if(isBitSet(imageByte, imageBitCounter)){
+                //set a bit in the new byte
+                outputByte = (byte) (outputByte | (1 << counter));
+            }
+
+            //get a new byte from the image if we need to
+            if (imageBitCounter == 1) {
+                imageByteCounter = getNextAvailableImageByte(imageInformation, imageByteCounter);
+                imageByte = imageBytes[imageByteCounter];
+                imageBitCounter = 0;
+            }
+            else {
+                imageBitCounter++;
+            }
+        }
+
+        return new ByteReadPosition(outputByte, imageByteCounter, imageBitCounter);
+    }
+
+
+    private int convertMessageLengthByteArrayToInt(byte[] messageLengthBytes){
+        int value = (messageLengthBytes[0] << (Byte.SIZE * 3));
+        value |= (messageLengthBytes[1] & 0xFF) << (Byte.SIZE * 2);
+        value |= (messageLengthBytes[2] & 0xFF) << (Byte.SIZE);
+        value |= (messageLengthBytes[3] & 0xFF);
+        return value;
+    }
+
     private int[] writeByteIntoOutput(byte byteToWrite, byte[] output,
-                                     int outputByteCounter, int outputBitCounter,
-                                     ImageInformation imageInformation){
+                                      int outputByteCounter, int outputBitCounter,
+                                      ImageInformation imageInformation){
+
         for (int counter = 0; counter <= 7; counter++) {
             if (isBitSet(byteToWrite, counter)) {
                 //set a bit in the output
@@ -89,113 +181,6 @@ public class ByteHelper {
         return new int[]{outputByteCounter, outputBitCounter};
     }
 
-    public byte[] hideMessageInImage(byte[] messageBytes, byte[] imageBytes, ImageInformation imageInformation) {
-
-        //We start at the end and work backward
-        int outputByteCounter = imageInformation.getEndLocation() -1;
-        int outputBitCounter = 0;
-
-        byte[] output = Arrays.copyOf(imageBytes, imageBytes.length);
-
-        //write the message length
-        // TODO: Fix the problem that this is a 32bit signed int and we're treating it as if it was 8bit unsigned
-        byte messageLengthByte = (byte)messageBytes.length;
-        int [] newPositions = writeByteIntoOutput(messageLengthByte, output, outputByteCounter, outputBitCounter, imageInformation);
-        outputByteCounter = newPositions[0];
-        outputBitCounter = newPositions[1];
-
-        //write the message
-        for (byte bite : messageBytes) {
-            newPositions = writeByteIntoOutput(bite, output, outputByteCounter, outputBitCounter, imageInformation);
-            outputByteCounter = newPositions[0];
-            outputBitCounter = newPositions[1];
-        }
-
-        // Debug
-        int differenceCount = 0;
-        for (int x = 0; x < output.length; x++) {
-            if (output[x] != imageBytes[x]) {
-                System.out.println(String.format("Different - %d", x));
-                differenceCount++;
-            }
-
-        }
-        System.out.println(String.format("There was %d different bytes", differenceCount));
-
-        return output;
-    }
-
-    public byte[] readMessageFromImage(byte[] imageBytes, ImageInformation imageInformation){
-
-        ArrayList<Byte> messageStorage = new ArrayList<>();
-
-        int imageByteCounter = imageInformation.getEndLocation() -1;
-        int imageBitCounter = 0;
-
-        //TODO: Tidy this bit up and also fix the 32 bit signed vs 8 bit unsigned problem
-
-        //read the message length
-        byte messageLengthByte = 0x00;
-        byte imageByte = imageBytes[imageByteCounter];
-        for (int counter = 0; counter <= 7; counter++) {
-
-            if(isBitSet(imageByte, imageBitCounter)){
-                //set a bit in the new byte
-                messageLengthByte = (byte) (messageLengthByte | (1 << counter));
-            }
-
-            //get a new byte from the image if we need to
-            if (imageBitCounter == 1) {
-                imageByteCounter = getNextAvailableImageByte(imageInformation, imageByteCounter);
-                imageByte = imageBytes[imageByteCounter];
-                imageBitCounter = 0;
-            }
-            else {
-                imageBitCounter++;
-            }
-        }
-
-        int messageLength = (int)messageLengthByte;
-
-        //read the message
-        while(messageStorage.size() < 32){
-            byte newByte = 0x00;
-            imageByte = imageBytes[imageByteCounter];
-            for (int counter = 0; counter <= 7; counter++) {
-
-                if(isBitSet(imageByte, imageBitCounter)){
-                    //set a bit in the new byte
-                    newByte = (byte) (newByte | (1 << counter));
-                }
-
-                //get a new byte from the image if we need to
-                if (imageBitCounter == 1) {
-                    imageByteCounter = getNextAvailableImageByte(imageInformation, imageByteCounter);
-                    imageByte = imageBytes[imageByteCounter];
-                    imageBitCounter = 0;
-                }
-                else {
-                    imageBitCounter++;
-                }
-            }
-
-            messageStorage.add(newByte);
-
-        }
-
-        //convert to byte array
-        Byte[] bigByteStorage = new Byte[messageStorage.size()];
-        bigByteStorage = messageStorage.toArray(bigByteStorage);
-        byte[] output = new byte[messageStorage.size()];
-
-        for(int counter = 0; counter < bigByteStorage.length; counter++){
-            output[counter] = bigByteStorage[counter];
-        }
-
-        return output;
-
-    }
-
     private int getNextAvailableImageByte(ImageInformation imageInformation, int currentByteLocation){
         //Start a the end and move backward
         currentByteLocation--;
@@ -211,24 +196,14 @@ public class ByteHelper {
         return (bite & (1 << bitPosition)) != 0;
     }
 
-
-    public byte[] convertMessageToBytes(String message) {
-
-        return message.getBytes();
-    }
-
-    public boolean isThereSpaceToHideTheMessage(byte[] messageBytes, ImageInformation imageInformation) {
-        return getNumberOfBytesRequiredToHideMessage(messageBytes) < imageInformation.availableBytes();
-    }
-
     private int getNumberOfBytesRequiredToHideMessage(byte[] messageBytes) {
 
-        return messageBytes.length * 4;
+        //x4 as each byte will require 4 to hide it
+        //+4 as we need 4 bytes to store the message length (32bit int)
+        return (messageBytes.length * 4) + 4;
     }
 
-
     // DEBUG METHODS
-
     public void printImageMarkerLocationsJpg(byte[] imageBytes) {
 
         System.out.println(String.format("Image is %d bytes long", imageBytes.length));

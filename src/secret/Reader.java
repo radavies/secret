@@ -10,6 +10,7 @@ public class Reader {
     private final String outputPath;
     private final FileHelper fileHelper;
     private final ByteHelper byteHelper;
+    private final Encryption encryption;
 
     public Reader(String key, String imagePath, String outputPath){
 
@@ -19,6 +20,7 @@ public class Reader {
 
         fileHelper = new FileHelper();
         byteHelper = new ByteHelper();
+        encryption = new Encryption();
 
         if(this.key.equalsIgnoreCase("")
                 || this.imagePath.equalsIgnoreCase("")
@@ -37,11 +39,13 @@ public class Reader {
         ImageInformation imageInformation = byteHelper.getImageInformation(imageBytes);
 
         byte[] messageBytes = byteHelper.readMessageFromImage(imageBytes, imageInformation);
+        //TODO: add error handling around the crypto
+        String message = encryption.decrypt(messageBytes, key);
+
+        //TODO: write the message to file
 
         //debug
-        System.out.println(Arrays.toString(messageBytes));
-        String test = new String(messageBytes);
-        System.out.print(test);
+        System.out.print(message);
     }
 
 }
