@@ -61,6 +61,34 @@ public class ByteHelper {
         return imageInformation;
     }
 
+    private int[] writeByteIntoOutput(byte byteToWrite, byte[] output,
+                                     int outputByteCounter, int outputBitCounter,
+                                     ImageInformation imageInformation){
+        for (int counter = 0; counter <= 7; counter++) {
+            if (isBitSet(byteToWrite, counter)) {
+                //set a bit in the output
+                byte outByte = output[outputByteCounter];
+                outByte = (byte) (outByte | (1 << outputBitCounter));
+                output[outputByteCounter] = outByte;
+
+            } else {
+                //unset a bit in the output
+                byte outByte = output[outputByteCounter];
+                outByte = (byte) (outByte & ~(1 << outputBitCounter));
+                output[outputByteCounter] = outByte;
+            }
+
+            if (outputBitCounter == 1) {
+                outputByteCounter = getNextAvailableImageByte(imageInformation, outputByteCounter);
+                outputBitCounter = 0;
+            }
+            else {
+                outputBitCounter++;
+            }
+        }
+        return new int[]{outputByteCounter, outputBitCounter};
+    }
+
     public byte[] hideMessageInImage(byte[] messageBytes, byte[] imageBytes, ImageInformation imageInformation) {
 
         //We start at the end and work backward
@@ -69,29 +97,18 @@ public class ByteHelper {
 
         byte[] output = Arrays.copyOf(imageBytes, imageBytes.length);
 
+        //write the message length
+        // TODO: Fix the problem that this is a 32bit signed int and we're treating it as if it was 8bit unsigned
+        byte messageLengthByte = (byte)messageBytes.length;
+        int [] newPositions = writeByteIntoOutput(messageLengthByte, output, outputByteCounter, outputBitCounter, imageInformation);
+        outputByteCounter = newPositions[0];
+        outputBitCounter = newPositions[1];
+
+        //write the message
         for (byte bite : messageBytes) {
-            for (int counter = 0; counter < 7; counter++) {
-                if (isBitSet(bite, counter)) {
-                    //set a bit in the output
-                    byte outByte = output[outputByteCounter];
-                    outByte = (byte) (outByte | (1 << outputBitCounter));
-                    output[outputByteCounter] = outByte;
-
-                } else {
-                    //unset a bit in the output
-                    byte outByte = output[outputByteCounter];
-                    outByte = (byte) (outByte & ~(1 << outputBitCounter));
-                    output[outputByteCounter] = outByte;
-                }
-
-                if (outputBitCounter == 1) {
-                    outputByteCounter = getNextAvailableImageByte(imageInformation, outputByteCounter);
-                    outputBitCounter = 0;
-                }
-                else {
-                    outputBitCounter++;
-                }
-            }
+            newPositions = writeByteIntoOutput(bite, output, outputByteCounter, outputBitCounter, imageInformation);
+            outputByteCounter = newPositions[0];
+            outputBitCounter = newPositions[1];
         }
 
         // Debug
@@ -115,13 +132,36 @@ public class ByteHelper {
         int imageByteCounter = imageInformation.getEndLocation() -1;
         int imageBitCounter = 0;
 
-        // TODO: replace loop with a check for EOM flag
-        // Current message is 32 bytes long
+        //TODO: Tidy this bit up and also fix the 32 bit signed vs 8 bit unsigned problem
 
+        //read the message length
+        byte messageLengthByte = 0x00;
+        byte imageByte = imageBytes[imageByteCounter];
+        for (int counter = 0; counter <= 7; counter++) {
+
+            if(isBitSet(imageByte, imageBitCounter)){
+                //set a bit in the new byte
+                messageLengthByte = (byte) (messageLengthByte | (1 << counter));
+            }
+
+            //get a new byte from the image if we need to
+            if (imageBitCounter == 1) {
+                imageByteCounter = getNextAvailableImageByte(imageInformation, imageByteCounter);
+                imageByte = imageBytes[imageByteCounter];
+                imageBitCounter = 0;
+            }
+            else {
+                imageBitCounter++;
+            }
+        }
+
+        int messageLength = (int)messageLengthByte;
+
+        //read the message
         while(messageStorage.size() < 32){
             byte newByte = 0x00;
-            byte imageByte = imageBytes[imageByteCounter];
-            for (int counter = 0; counter < 7; counter++) {
+            imageByte = imageBytes[imageByteCounter];
+            for (int counter = 0; counter <= 7; counter++) {
 
                 if(isBitSet(imageByte, imageBitCounter)){
                     //set a bit in the new byte

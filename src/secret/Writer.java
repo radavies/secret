@@ -40,6 +40,7 @@ public class Writer {
             byte[] messageBytes = byteHelper.convertMessageToBytes(message);
 
             //debug
+            System.out.println(String.format("Message is %d bytes long.", messageBytes.length));
             System.out.println(Arrays.toString(messageBytes));
             String test = new String(messageBytes);
             System.out.print(test);
