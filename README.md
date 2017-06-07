@@ -8,6 +8,8 @@ The message is AES encrypted before being written into the image.
 
 Currently works with JPG images.
 
+Uses least significant bit steganography (using the two least significant bits).
+
 **Example arguments**
 
 To write a secret image:
