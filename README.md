@@ -10,6 +10,8 @@ Currently works with JPG images.
 
 Uses least significant bit steganography (using the two least significant bits).
 
+Note - For some reason it currently only seems to work for portrait images.
+
 **Example arguments**
 
 To write a secret image:

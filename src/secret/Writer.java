@@ -54,11 +54,7 @@ public class Writer {
                 throw new RuntimeException("Image file not large enough to contain message.");
             }
 
-            byteHelper.printImageMarkerLocationsJpg(imageBytes);
-
             byte[] outputBytes = byteHelper.hideMessageInImage(messageBytes, imageBytes, imageInformation);
-
-            byteHelper.printImageLocationComparisonJpg(imageBytes, outputBytes);
 
             if(!fileHelper.writeBytesToFile(outputBytes, outputPath)){
                 throw new RuntimeException("Error writing the output image file.");
