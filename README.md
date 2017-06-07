@@ -1,8 +1,12 @@
 **Secret**
 
-Takes and input image and hides a text message from a file within the image, before saving this to a new output image.
+Takes an image as input and hides a text message, read from a file, within the image, before saving this to a new output image.
 
-Can also read a previously created secret image and retrieve the message.
+Can then read a previously created secret image and retrieve the message, writing it to an output text file.
+
+The message is AES encrypted before being written into the image.
+
+Currently works with JPG images.
 
 **Example arguments**
 
