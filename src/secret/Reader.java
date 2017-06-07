@@ -30,22 +30,34 @@ public class Reader {
     }
 
     public void read(){
-        byte[] imageBytes = fileHelper.getImageData(imagePath);
 
-        if (imageBytes == null || imageBytes.length < 1) {
-            throw new RuntimeException("Image file not found or image was empty.");
+        try {
+
+            byte[] imageBytes = fileHelper.getImageData(imagePath);
+
+            if (imageBytes == null || imageBytes.length < 1) {
+                throw new RuntimeException("Image file not found or image was empty.");
+            }
+
+            ImageInformation imageInformation = byteHelper.getImageInformation(imageBytes);
+
+            byte[] messageBytes = byteHelper.readMessageFromImage(imageBytes, imageInformation);
+
+            byte[] decryptedMessage = encryption.decrypt(messageBytes, key);
+
+            if (decryptedMessage == null) {
+                throw new RuntimeException("Could not decrypt the message.");
+            }
+
+            if (!fileHelper.writeBytesToFile(decryptedMessage, outputPath)) {
+                throw new RuntimeException("Error writing the output message file.");
+            }
+
+        } catch (Exception ex) {
+            System.out.println("----------");
+            System.out.println(String.format("Something went wrong - %s", ex.getMessage()));
+            System.out.println("----------");
         }
-
-        ImageInformation imageInformation = byteHelper.getImageInformation(imageBytes);
-
-        byte[] messageBytes = byteHelper.readMessageFromImage(imageBytes, imageInformation);
-        //TODO: add error handling around the crypto
-        String message = encryption.decrypt(messageBytes, key);
-
-        //TODO: write the message to file
-
-        //debug
-        System.out.print(message);
     }
 
 }

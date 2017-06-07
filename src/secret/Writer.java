@@ -35,17 +35,12 @@ public class Writer {
 
         try {
 
-            //TODO: add error handling around the crypto
-
             String message = fileHelper.getMessage(messagePath);
             byte[] messageBytes = encryption.encrypt(message, key);
-            //byte[] messageBytes = byteHelper.convertMessageToBytes(message);
 
-            //debug
-            System.out.println(String.format("Message is %d bytes long.", messageBytes.length));
-            System.out.println(Arrays.toString(messageBytes));
-            String test = new String(messageBytes);
-            System.out.print(test);
+            if(messageBytes == null){
+                throw new RuntimeException("Could not encrypt the message.");
+            }
 
             byte[] imageBytes = fileHelper.getImageData(imagePath);
 
@@ -65,7 +60,9 @@ public class Writer {
 
             byteHelper.printImageLocationComparisonJpg(imageBytes, outputBytes);
 
-            fileHelper.writeBytesToFile(outputBytes, outputPath);
+            if(!fileHelper.writeBytesToFile(outputBytes, outputPath)){
+                throw new RuntimeException("Error writing the output image file.");
+            }
 
 
         } catch (Exception ex) {
