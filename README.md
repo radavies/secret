@@ -13,3 +13,7 @@ To write a secret image:
 To read a secret image
 
 `key="xyz123" image="out.jpg" output="read.txt" job="read"`
+
+**Inspired By**
+
+This program was inspired by a Computerphile (@computer_phile) video on stenanography (https://www.youtube.com/watch?v=TWEXCYQKyDc)
